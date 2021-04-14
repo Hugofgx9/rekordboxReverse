@@ -4,3 +4,11 @@ body {
   max-width: 38rem;
   padding: 2rem;
 }
+
+
+div.load-bar{
+  margin-top: 100px;
+  width: 70vh;
+  height: 2px;
+  background-color: rgb(163, 163, 163);
+}

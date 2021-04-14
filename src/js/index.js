@@ -8,8 +8,8 @@ $button.addEventListener('click', () => {
   ipc.send('open-file-dialog');
 });
 
-
-//fs.mkdirSync('/Users/hugofaugeroux/hello', { recursive: true });
+let tracks; 
+let missingFiles = [];
 
 
 ipc.on('selectedElement', (event, path) => {
@@ -18,37 +18,45 @@ ipc.on('selectedElement', (event, path) => {
     let resp = JSON.parse(json);
 
     let playlists = resp.DJ_PLAYLISTS.PLAYLISTS.NODE.NODE;
-    let tracks = resp.DJ_PLAYLISTS.COLLECTION.TRACK;
+    tracks = resp.DJ_PLAYLISTS.COLLECTION.TRACK;
 
-    let counter = 0;
-
-    tracks.forEach(  track => {
-
-      //let track = tracks[100];
-
-      let path = track._attributes.Location;
-      path = path.replace(new RegExp('.+?(?=\/Users)'), ''); //remove le début
-      path = decodeURIComponent(path); //special chars from utf8 to chars
-
-      //si le fichier existe 
-      if (fs.existsSync(path)) {
-        counter++;
-      } 
-      //le fichier n'existe pas 
-      else {
-      }
-
-    });
-    //playlistTraitement(playlists, 'playlist');
-
-    console.log(`${counter}/${tracks.length} files found`);
-
+    playlistTraitement(playlists, 'playlist');
 
   });
-})
+});
 
-
+/**
+ * @param  {[playlist]} playlistArray
+ * @param  {string} parent the parent directory
+ */
 function playlistTraitement(playlistArray, parent) {
+
+  let count = 0;
+  let total = numberOfTracks(playlistArray);
+  createFolders(playlistArray, parent);
+  console.log(missingFiles);
+
+
+  function numberOfTracks(playlistArray){
+    let nb = 0;
+
+    for (const i in playlistArray) {
+      if ( playlistArray[i]._attributes ) {
+
+        // if array is a playlist
+        if ( playlistArray[i]._attributes.Type == 1) {
+          nb += parseInt(playlistArray[i]._attributes.Entries);
+        }
+
+        //if obj is a folder -> recurrence
+        else if ( playlistArray[i]._attributes.Type == 0 ) {
+          nb += parseInt(numberOfTracks(playlistArray[i].NODE));
+        }
+      }
+    }
+
+    return nb;
+  }
 
   function createFolders(playlistArray, parent) {
     for (const i in playlistArray) {
@@ -61,6 +69,7 @@ function playlistTraitement(playlistArray, parent) {
         // if array is a playlist
         if ( playlistArray[i]._attributes.Type == 1) {
           firstOrCreate(path);
+          fillDir(playlistArray[i], path)
         }
         
         //if obj is a folder -> recurrence
@@ -70,15 +79,58 @@ function playlistTraitement(playlistArray, parent) {
         }
       }
     }
+  }
 
+  function fillDir(playlist, dirPath) {
+
+    for (const trackOfPlaylist of playlist.TRACK) {
+
+      let track = tracks.find( t => t._attributes.TrackID == trackOfPlaylist._attributes.Key)
+
+      let sourcePath = track._attributes.Location;
+      sourcePath = sourcePath.replace(new RegExp('.+?(?=\/Users)'), ''); //remove le début
+      sourcePath = decodeURIComponent(sourcePath); //special chars from utf8 to chars
+      const fileName = sourcePath.replace(new RegExp('.*\/(.*)'), '$1');
+
+      //console.log('hello', count);
+
+      if ( isFileExist(sourcePath) ) {
+        fs.copyFileSync(sourcePath, `./${dirPath}/${fileName}`, fs.constants.COPYFILE_FICLONE)
+        count++;
+        //console.log(count + '/' + total);
+      } else {
+        console.error('le fichier n\'existe pas' + sourcePath);
+        missingFiles.push(sourcePath);
+      }
+    }
   }
 
 }
 
-
+/**
+ * @param  {sting} dir the directory path
+ */
 function firstOrCreate(dir) {
-  if (!fs.existsSync('./'+dir)){
-    fs.mkdirSync('./'+dir, { recursive: true });
-    console.log(dir + ' created');
+  const base = './';
+  if (!fs.existsSync(base+dir)){
+    fs.mkdirSync(base+dir, { recursive: true });
+    //console.log(dir + ' created');
+  }
+}
+
+
+/**
+ * @param  {string} path the path of the file
+ * 
+ * @return  {boolean} 
+ */
+function isFileExist(path) {
+  //si le fichier existe 
+  if (fs.existsSync(path)) {
+    return true
+  } 
+  //le fichier n'existe pas 
+  else {
+    return false;
   }
 }
