@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const ipc = require('electron').ipcMain;
 const path = require('path');
+const Copy = require('./js/copy');
 
 try {
   require('electron-reloader')(module)
@@ -54,8 +55,6 @@ app.on('activate', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
-
-
 ipc.on('open-file-dialog', function(event) {
   dialog.showOpenDialog({ 
     properties: ['openFile'],
@@ -64,6 +63,7 @@ ipc.on('open-file-dialog', function(event) {
     ]
   })
   .then( function (files) {
-    if (files) event.sender.send('selectedElement', files)
+    //if (files) event.sender.send('selectedElement', files)
+    if(files) new Copy(files)
   })
 })

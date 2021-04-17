@@ -6,9 +6,17 @@ body {
 }
 
 
-div.load-bar{
+div.progress-bar-container{
   margin-top: 100px;
   width: 70vh;
   height: 2px;
   background-color: rgb(163, 163, 163);
+  position: relative;
+}
+
+div.progress-bar{
+  height: 2px;
+  width: 10%;
+  background-color: blue;
+  position: absolute;
 }
